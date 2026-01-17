@@ -1,0 +1,48 @@
+# --- Python / FastAPI ---
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+bin/
+lib/
+include/
+
+# --- Environment & Secrets ---
+# NEVER commit your secrets!
+.env
+.env.*
+!.env.example
+
+# --- Testing & Coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# --- Databases (if using SQLite) ---
+*.db
+*.sqlite3
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Static/Media (if applicable) ---
+# Ignore uploaded files in local development
+static/uploads/
+media/
+
+# --- IDEs & Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store (macOS)

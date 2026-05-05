@@ -112,6 +112,7 @@ class ProductSchema(BaseModel):
         from_attributes = True
 
 # For Creating a User (Incoming data from React)
+""""
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
@@ -126,6 +127,7 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+        """
 
 # For JWT Tokens
 class Token(BaseModel):

@@ -87,7 +87,8 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-
+import os 
+from dotenv import load_dotenv
 # Import your local files
 from database import get_db, engine
 from models import Base, Product, ProductSchema, User  # Ensure User is in models.py
@@ -96,17 +97,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 
 # --- SECURITY CONFIGURATION ---
-SECRET_KEY = "your_secret_key_here" # Keep this very safe!
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY") # Keep this very safe!
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES",60))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 app = FastAPI()
+#Base.metadata.create_all(bind=engine)
 
 # --- CORS ---
-origins = ["*"]
+origins = [ "http://localhost:5173",
+            "https://artgallery-fe.vercel.app"
+           ]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -116,14 +121,20 @@ app.add_middleware(
 )
 
 # --- AUTH UTILS ---
-def hash_password(password: str):
+"""def hash_password(password: str):
     # Simply returns the plain string now
     return password
+"""
+def hash_password(password: str):
+    return pwd_context.hash(password[:72])
 
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password[:72], hashed_password)
+"""
 def verify_password(plain_password, stored_password):
     # Direct string comparison
     return plain_password == stored_password
-
+"""
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -168,7 +179,7 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
-
+"""
 @app.post("/auth/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -180,6 +191,16 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     # access_token = create_access_token(data={"sub": user.email})
     # return {"access_token": access_token, "token_type": "bearer"}
     return {"message": "Login successful"}
+"""
+@app.post("/auth/login", response_model=Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == form_data.username).first()
+
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # --- PRODUCT ENDPOINTS (Your Existing Logic) ---
 
@@ -201,6 +222,15 @@ def read_products(
 
     results = db.execute(statement).scalars().all()
     return results
+
+# new route
+@app.get("/products/slug/{slug}", response_model=ProductSchema)
+def read_product_by_slug(slug: str, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.slug == slug).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
 
 @app.get("/products/{product_id}", response_model=ProductSchema)
 def read_product_by_id(product_id: int, db: Session = Depends(get_db)):
